@@ -8,8 +8,7 @@ import cn.zbx1425.resourcepackupdater.io.network.DummyTrustManager;
 import cn.zbx1425.resourcepackupdater.network.ClientVersionC2SPacket;
 import cn.zbx1425.resourcepackupdater.network.ServerLockS2CPacket;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -42,16 +41,15 @@ public class ResourcePackUpdaterClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        ClientConfigurationConnectionEvents.INIT.register((handler, client) -> {
-            ServerLockRegistry.onLoginInitiated();
-        });
-        ClientConfigurationNetworking.registerGlobalReceiver(ServerLockS2CPacket.TYPE, (packet, sender) -> {
+        ClientPlayNetworking.registerGlobalReceiver(ServerLockS2CPacket.TYPE, (client, handler, buf, responseSender) -> {
+            ServerLockS2CPacket packet = ServerLockS2CPacket.decode(buf);
             ServerLockRegistry.onSetServerLock(packet.serverLockKey);
-            sender.sendPacket(new ClientVersionC2SPacket(ResourcePackUpdater.MOD_VERSION));
+            responseSender.sendPacket(new ClientVersionC2SPacket(ResourcePackUpdater.MOD_VERSION));
         });
-        ClientConfigurationConnectionEvents.READY.register((handler, client) -> {
-            ServerLockRegistry.onAfterSetServerLock();
-        });
+
+        // 1.20.1中没有ClientConfigurationConnectionEvents，因此需要手动处理登录逻辑
+        ServerLockRegistry.onLoginInitiated();
+        ServerLockRegistry.onAfterSetServerLock();
     }
 
     public static void dispatchSyncWork() {
@@ -60,7 +58,7 @@ public class ResourcePackUpdaterClient implements ClientModInitializer {
         while (true) {
             Dispatcher syncDispatcher = new Dispatcher();
             if (ResourcePackUpdater.CONFIG.selectedSource.value == null // TODO how did we get here?
-                || ResourcePackUpdater.CONFIG.selectedSource.value.baseUrl.isEmpty()) {
+                    || ResourcePackUpdater.CONFIG.selectedSource.value.baseUrl.isEmpty()) {
                 if (ResourcePackUpdater.CONFIG.sourceList.value.size() > 1) {
                     GL_PROGRESS_SCREEN.resetToSelectSource();
                     try {

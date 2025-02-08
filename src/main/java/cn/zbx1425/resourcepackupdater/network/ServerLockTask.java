@@ -1,28 +1,19 @@
 package cn.zbx1425.resourcepackupdater.network;
 
-import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.server.network.ConfigurationTask;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
-import java.util.function.Consumer;
+public class ServerLockTask {
 
-public class ServerLockTask implements ConfigurationTask {
-
-    public static final Type TYPE = new Type("zbx_rpu:server_lock");
-
-    public final String serverLockKey;
+    public static final ResourceLocation TYPE = new ResourceLocation("zbx_rpu:server_lock");
+    private final String serverLockKey;
 
     public ServerLockTask(String serverLockKey) {
         this.serverLockKey = serverLockKey;
     }
 
-    @Override
-    public void start(Consumer<Packet<?>> task) {
-        task.accept(ServerConfigurationNetworking.createS2CPacket(new ServerLockS2CPacket(serverLockKey)));
-    }
-
-    @Override
-    public Type type() {
-        return TYPE;
+    public void sendToPlayer(ServerPlayer player) {
+        ServerPlayNetworking.send(player, ServerLockS2CPacket.TYPE, new ServerLockS2CPacket(serverLockKey).toBuffer());
     }
 }

@@ -14,8 +14,8 @@ import cn.zbx1425.resourcepackupdater.util.MtrVersion;
 import cn.zbx1425.resourcepackupdater.util.RPUClientVersionSupplier;
 import com.google.gson.JsonParser;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -50,24 +50,18 @@ public class ResourcePackUpdater implements ModInitializer {
             LOGGER.error("Failed to load config", e);
         }
 
-        ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
-            if (ServerConfigurationNetworking.canSend(handler, ServerLockS2CPacket.TYPE)) {
-                handler.addTask(new ServerLockTask(CONFIG.serverLockKey.value));
-            } else {
-                if (ResourcePackUpdater.CONFIG.clientEnforceInstall.value) {
-                    handler.disconnect(Text.literal(new MismatchingVersionException(ResourcePackUpdater.MOD_VERSION, "未安裝 NOT INSTALLED").getMessage().trim()));
-                }
-            }
-        });
-        ServerConfigurationNetworking.registerGlobalReceiver(ClientVersionC2SPacket.TYPE, (packet, handler, sender) -> {
-            String clientVersion = packet.clientVersion;
+        ServerPlayNetworking.registerGlobalReceiver(ClientVersionC2SPacket.TYPE, (server, player, handler, buf, responseSender) -> {
+            String clientVersion = ClientVersionC2SPacket.decode(buf);
             if (!ResourcePackUpdater.CONFIG.clientEnforceVersion.value.isEmpty()) {
                 String versionCriteria = ResourcePackUpdater.CONFIG.clientEnforceVersion.value.replace("current", ResourcePackUpdater.MOD_VERSION);
                 if (!MtrVersion.parse(clientVersion).matches(versionCriteria)) {
-                    handler.disconnect(Text.literal(new MismatchingVersionException(ResourcePackUpdater.MOD_VERSION, clientVersion).getMessage().trim()));
+                    player.connection.disconnect(Text.literal(new MismatchingVersionException(ResourcePackUpdater.MOD_VERSION, clientVersion).getMessage().trim()));
                 }
             }
-            handler.completeTask(ServerLockTask.TYPE);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(ServerLockS2CPacket.TYPE, (server, player, handler, buf, responseSender) -> {
+            handler.addTask(new ServerLockTask(CONFIG.serverLockKey.value));
         });
     }
 }
