@@ -41,7 +41,7 @@ public class ResourcePackUpdaterClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        ClientPlayNetworking.registerGlobalReceiver(ServerLockS2CPacket.TYPE, (client, handler, buf, responseSender) -> {
+        ClientPlayNetworking.registerGlobalReceiver(ServerLockS2CPacket.TYPE.getId(), (client, handler, buf, responseSender) -> {
             ServerLockS2CPacket packet = ServerLockS2CPacket.decode(buf);
             ServerLockRegistry.onSetServerLock(packet.serverLockKey);
             responseSender.sendPacket(new ClientVersionC2SPacket(ResourcePackUpdater.MOD_VERSION));

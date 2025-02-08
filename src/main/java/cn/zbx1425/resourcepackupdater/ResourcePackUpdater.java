@@ -50,18 +50,25 @@ public class ResourcePackUpdater implements ModInitializer {
             LOGGER.error("Failed to load config", e);
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(ClientVersionC2SPacket.TYPE, (server, player, handler, buf, responseSender) -> {
-            String clientVersion = ClientVersionC2SPacket.decode(buf);
-            if (!ResourcePackUpdater.CONFIG.clientEnforceVersion.value.isEmpty()) {
-                String versionCriteria = ResourcePackUpdater.CONFIG.clientEnforceVersion.value.replace("current", ResourcePackUpdater.MOD_VERSION);
-                if (!MtrVersion.parse(clientVersion).matches(versionCriteria)) {
-                    player.connection.disconnect(Text.literal(new MismatchingVersionException(ResourcePackUpdater.MOD_VERSION, clientVersion).getMessage().trim()));
+        ServerPlayNetworking.registerGlobalReceiver(
+                new ResourceLocation("resourcepackupdater", "client_version"),
+                (server, player, handler, buf, responseSender) -> {
+                    String clientVersion = ClientVersionC2SPacket.decode(buf);
+                    if (!ResourcePackUpdater.CONFIG.clientEnforceVersion.value.isEmpty()) {
+                        String versionCriteria = ResourcePackUpdater.CONFIG.clientEnforceVersion.value.replace("current", ResourcePackUpdater.MOD_VERSION);
+                        if (!MtrVersion.parse(clientVersion).matches(versionCriteria)) {
+                            player.connection.disconnect(Text.literal(new MismatchingVersionException(ResourcePackUpdater.MOD_VERSION, clientVersion).getMessage().trim()));
+                        }
+                    }
                 }
-            }
-        });
+        );
 
-        ServerPlayNetworking.registerGlobalReceiver(ServerLockS2CPacket.TYPE, (server, player, handler, buf, responseSender) -> {
-            handler.addTask(new ServerLockTask(CONFIG.serverLockKey.value));
-        });
+        ServerPlayNetworking.registerGlobalReceiver(
+                new ResourceLocation("resourcepackupdater", "server_lock"),
+                (server, player, handler, buf, responseSender) -> {
+                    handler.addTask(new ServerLockTask(CONFIG.serverLockKey.value));
+                }
+        );
+
     }
 }

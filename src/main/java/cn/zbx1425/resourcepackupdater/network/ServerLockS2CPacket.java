@@ -29,4 +29,10 @@ public class ServerLockS2CPacket implements FabricPacket {
     public PacketType<?> getType() {
         return TYPE;
     }
+
+    public FriendlyByteBuf toBuffer() {
+        FriendlyByteBuf buf = new FriendlyByteBuf();
+        this.write(buf);
+        return buf;
+    }
 }
